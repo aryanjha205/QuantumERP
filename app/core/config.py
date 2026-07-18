@@ -34,6 +34,24 @@ class Settings(BaseSettings):
     # Database — set SQLALCHEMY_DATABASE_URI directly via Vercel env var
     SQLALCHEMY_DATABASE_URI: str = ""
 
+    @field_validator("SQLALCHEMY_DATABASE_URI", mode="before")
+    @classmethod
+    def normalize_database_uri(cls, value: str) -> str:
+        """Accept a database URL pasted from either a .env file or Vercel."""
+        if not isinstance(value, str):
+            return value
+
+        value = value.strip()
+        # Quotes are syntax in a .env file, but are literal characters in
+        # Vercel's environment-variable editor.
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+            value = value[1:-1]
+        # Also tolerate pasting a complete .env assignment in the Value field.
+        prefix = "SQLALCHEMY_DATABASE_URI="
+        if value.startswith(prefix):
+            value = value[len(prefix):].strip().strip("'\"")
+        return value
+
     # Redis (not used in serverless; kept for local dev)
     REDIS_HOST: str = "localhost"
     REDIS_PORT: str = "6379"

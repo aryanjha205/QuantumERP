@@ -1,3 +1,4 @@
+import logging
 from typing import Generator
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -9,6 +10,8 @@ from app.core import security
 from app.core.config import settings
 from app.db.session import SessionLocal, initialize_database
 from app.models.user import User
+
+logger = logging.getLogger(__name__)
 
 reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/login/access-token"
@@ -22,9 +25,12 @@ def get_db() -> Generator:
     except HTTPException:
         raise
     except Exception as exc:
+        # Keep credentials out of the response, but retain the actual database
+        # error in Vercel's function logs for troubleshooting.
+        logger.exception("Database initialization failed")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database is unavailable. Configure SQLALCHEMY_DATABASE_URI in Vercel.",
+            detail="Database is unavailable. Check the Vercel function logs for the connection error.",
         ) from exc
     finally:
         if "db" in locals():
