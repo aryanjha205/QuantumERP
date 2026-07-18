@@ -23,3 +23,16 @@ class User(Base):
     role = Column(Enum(UserRole), default=UserRole.EMPLOYEE, nullable=False)
     is_active = Column(Boolean(), default=True)
     is_superuser = Column(Boolean(), default=False)
+
+from sqlalchemy import DateTime
+class PendingUser(Base):
+    __tablename__ = "pending_users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=False)
+    full_name = Column(String)
+    password = Column(String, nullable=False)
+    role = Column(String, nullable=False)
+    otp = Column(String, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+

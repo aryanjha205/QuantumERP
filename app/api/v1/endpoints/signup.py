@@ -11,12 +11,9 @@ from app.core.config import settings
 from app.schemas.user import User, UserCreate
 from app.services.mail import send_otp_email
 
-router = APIRouter()
+from app.models.user import PendingUser
 
-# In-memory store for pending signups (OTP -> registration data mapping)
-# For production serverless environments, this can be written to Redis or a temporary DB table,
-# but for standard deployment, a timed dict is perfect for demonstration.
-pending_signups: Dict[str, Dict[str, Any]] = {}
+router = APIRouter()
 
 @router.post("/signup/request-otp")
 def request_otp(
@@ -26,7 +23,7 @@ def request_otp(
 ) -> Any:
     """
     Step 1: Check if email already exists, generate a 6-digit OTP, send it via email,
-    and save user registration details in memory.
+    and save user registration details in database.
     """
     user = crud_user.user.get_by_email(db, email=user_in.email)
     if user:
@@ -35,16 +32,23 @@ def request_otp(
     # Generate 6-digit OTP
     otp = f"{random.randint(100000, 999999)}"
     
-    # Store registration details temporarily (expires in 10 minutes)
-    pending_signups[otp] = {
-        "user_data": user_in.model_dump(),
-        "expires_at": datetime.utcnow() + timedelta(minutes=10)
-    }
+    # Check if a pending registration for this email already exists
+    existing = db.query(PendingUser).filter(PendingUser.email == user_in.email).first()
+    if existing:
+        db.delete(existing)
+        db.commit()
 
-    # Clean up expired OTPs to prevent memory bloating
-    expired_otps = [o for o, data in pending_signups.items() if data["expires_at"] < datetime.utcnow()]
-    for o in expired_otps:
-        pending_signups.pop(o, None)
+    # Create a new PendingUser record
+    pending = PendingUser(
+        email=user_in.email,
+        full_name=user_in.full_name,
+        password=user_in.password,
+        role=user_in.role.value if hasattr(user_in.role, 'value') else user_in.role,
+        otp=otp,
+        expires_at=datetime.utcnow() + timedelta(minutes=10)
+    )
+    db.add(pending)
+    db.commit()
 
     # Send email in background
     background_tasks.add_task(send_otp_email, user_in.email, otp)
@@ -59,20 +63,27 @@ def verify_otp(
     """
     Step 2: Validate the OTP. If valid, register the user into the database.
     """
-    signup_data = pending_signups.get(otp)
-    if not signup_data:
+    pending = db.query(PendingUser).filter(PendingUser.otp == otp).first()
+    if not pending:
         raise HTTPException(status_code=400, detail="Invalid or expired OTP")
     
-    if signup_data["expires_at"] < datetime.utcnow():
-        pending_signups.pop(otp, None)
+    if pending.expires_at < datetime.utcnow():
+        db.delete(pending)
+        db.commit()
         raise HTTPException(status_code=400, detail="OTP has expired")
     
-    # Remove from memory store
-    pending_signups.pop(otp, None)
-
     # Reconstruct user object and create in DB
-    user_data = signup_data["user_data"]
-    obj_in = UserCreate(**user_data)
+    obj_in = UserCreate(
+        email=pending.email,
+        password=pending.password,
+        full_name=pending.full_name,
+        role=pending.role
+    )
     
     user = crud_user.user.create(db, obj_in=obj_in)
+    
+    # Clean up from database
+    db.delete(pending)
+    db.commit()
+    
     return user
