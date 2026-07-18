@@ -13,7 +13,10 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
 
     # CORS — allow all by default; override via env var in production
-    BACKEND_CORS_ORIGINS: List[str] = [
+    # Keep ``str`` in the input annotation so pydantic-settings does not require
+    # an environment value to be JSON before this validator can normalize it.
+    # This lets Vercel use either ``https://example.com`` or a JSON array.
+    BACKEND_CORS_ORIGINS: Union[List[str], str] = [
         "https://quant-urp.vercel.app",
         "http://localhost:3000",
         "http://localhost:5500",
@@ -21,10 +24,10 @@ class Settings(BaseSettings):
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
-    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> Union[List[str], str]:
+    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
         if isinstance(v, str) and not v.startswith("["):
             return [i.strip() for i in v.split(",")]
-        elif isinstance(v, (list, str)):
+        elif isinstance(v, list):
             return v
         raise ValueError(v)
 
