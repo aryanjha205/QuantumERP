@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core import security
 from app.core.config import settings
-from app.db.session import SessionLocal
+from app.db.session import SessionLocal, initialize_database
 from app.models.user import User
 
 reusable_oauth2 = OAuth2PasswordBearer(
@@ -16,10 +16,19 @@ reusable_oauth2 = OAuth2PasswordBearer(
 
 def get_db() -> Generator:
     try:
+        initialize_database()
         db = SessionLocal()
         yield db
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database is unavailable. Configure SQLALCHEMY_DATABASE_URI in Vercel.",
+        ) from exc
     finally:
-        db.close()
+        if "db" in locals():
+            db.close()
 
 def get_current_user(
     db: Session = Depends(get_db), token: str = Depends(reusable_oauth2)

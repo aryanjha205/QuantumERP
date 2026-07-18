@@ -1,5 +1,5 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import field_validator, model_validator
+from pydantic import field_validator
 from typing import List, Union
 
 
@@ -30,21 +30,6 @@ class Settings(BaseSettings):
 
     # Database — set SQLALCHEMY_DATABASE_URI directly via Vercel env var
     SQLALCHEMY_DATABASE_URI: str = ""
-
-    POSTGRES_SERVER: str = "localhost"
-    POSTGRES_USER: str = "erp_user"
-    POSTGRES_PASSWORD: str = "erp_password"
-    POSTGRES_DB: str = "erp_db"
-    POSTGRES_PORT: str = "5432"
-
-    @model_validator(mode="after")
-    def assemble_db_connection(self) -> "Settings":
-        if not self.SQLALCHEMY_DATABASE_URI:
-            self.SQLALCHEMY_DATABASE_URI = (
-                f"postgresql://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
-                f"@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
-            )
-        return self
 
     # Redis (not used in serverless; kept for local dev)
     REDIS_HOST: str = "localhost"
