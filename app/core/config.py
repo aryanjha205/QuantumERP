@@ -46,6 +46,12 @@ class Settings(BaseSettings):
     REDIS_HOST: str = "localhost"
     REDIS_PORT: str = "6379"
 
+    # SMTP Settings
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = "bharatstore.in@gmail.com"
+    SMTP_PASSWORD: str = "ujso nlls epgp iwed"
+
     model_config = SettingsConfigDict(
         case_sensitive=True,
         env_file=".env",
