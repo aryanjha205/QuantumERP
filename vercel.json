@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "app/main.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "app/main.py"
+    }
+  ],
+  "env": {
+    "SQLALCHEMY_DATABASE_URI": "@sqlalchemy_database_uri",
+    "SECRET_KEY": "@secret_key",
+    "BACKEND_CORS_ORIGINS": "@backend_cors_origins"
+  }
+}
