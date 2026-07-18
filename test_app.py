@@ -1,7 +1,25 @@
-import pytest
 from fastapi.testclient import TestClient
 from app.main import app
-from app.api.v1.endpoints.signup import pending_signups
+from app.api import deps
+
+
+class EmptyPendingSignupSession:
+    """Minimal DB double for tests that only need an empty OTP lookup."""
+    def query(self, *_args):
+        return self
+
+    def filter(self, *_args):
+        return self
+
+    def first(self):
+        return None
+
+
+def empty_db():
+    yield EmptyPendingSignupSession()
+
+
+app.dependency_overrides[deps.get_db] = empty_db
 
 client = TestClient(app)
 

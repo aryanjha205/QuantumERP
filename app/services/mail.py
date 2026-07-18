@@ -8,6 +8,9 @@ def send_otp_email(to_email: str, otp: str) -> None:
     Send OTP verification email using standard library smtplib (No external Node.js nodemailer wrapper needed,
     since we are in a Python FastAPI backend environment).
     """
+    if not settings.SMTP_USER or not settings.SMTP_PASSWORD:
+        raise RuntimeError("SMTP_USER and SMTP_PASSWORD must be configured to send OTP emails")
+
     msg = MIMEMultipart()
     msg["From"] = settings.SMTP_USER
     msg["To"] = to_email

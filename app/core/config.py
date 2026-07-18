@@ -13,7 +13,11 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
 
     # CORS — allow all by default; override via env var in production
-    BACKEND_CORS_ORIGINS: List[str] = ["*"]
+    BACKEND_CORS_ORIGINS: List[str] = [
+        "https://quant-urp.vercel.app",
+        "http://localhost:3000",
+        "http://localhost:5500",
+    ]
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
@@ -49,8 +53,8 @@ class Settings(BaseSettings):
     # SMTP Settings
     SMTP_HOST: str = "smtp.gmail.com"
     SMTP_PORT: int = 587
-    SMTP_USER: str = "bharatstore.in@gmail.com"
-    SMTP_PASSWORD: str = "ujso nlls epgp iwed"
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
 
     model_config = SettingsConfigDict(
         case_sensitive=True,
